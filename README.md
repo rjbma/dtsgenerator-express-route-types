@@ -1,7 +1,36 @@
 # dtsgenerator-express-route-types
 
-This is the `dtsgenerator` plugin.
-This plugin's description is here.
+This is a `dtsgenerator` plugin for generating types for **Express** route handlers. 
+
+For each route specified under the `Paths` namespace, this plugin will look for types (``PathParameters``, 
+``Responses``, ``RequestBody`` and ``QueryParameters``) that are defined for that path, and use `any` for those 
+types that can't be found.
+
+For example, for a path like `DeletePet`:
+
+```typescript
+declare namespace Paths {
+  ...
+  namespace DeletePet {
+      namespace Parameters {
+          export type Id = number;
+      }
+      export interface PathParameters {
+          id: Parameters.Id;
+      }
+      namespace Responses {
+          export type Default = Components.Schemas.Error;
+      }
+  }
+  ...
+}
+```
+
+the pluging would would add the following type:
+
+```typescript
+type RouteHandler = RequestHandler<Paths.DeletePet.PathParameters, Paths.DeletePet.Responses.Default, any, any>;
+```
 
 # Install
 
@@ -20,44 +49,6 @@ npm install dtsgenerator-express-route-types
 }
 ```
 
-# Configuration
-
-<!-- If this plugin uses the config object this section is useful for plugin user. -->
-
-- the type of configuration
-```
-type Config = {
-    map: {
-        from: (string | boolean)[];
-        to: string[];
-    }[];
-};
-```
-
-| key | type | description |
-|-----|------|-------------|
-| map | Array of object | the mapping of replacing. |
-| map.*n*.from | `Array<string | boolean>` | the definition of from name. if this value is true, it treated as wildcard . |
-| map.*n*.to | `Array<string | boolean>` | the definition of to name. |
-
-
-- Example
-```
-{
-  "map": [
-    {
-      "from": ["Components", "Schemas"],
-      "to": ["Test", "PetStore"]
-    },
-    {
-      "from": ["Paths"],
-      "to": ["Test", "PetStore"]
-    }
-  ]
-}
-```
-
-
 # Development
 
 ```
@@ -70,13 +61,6 @@ npm test
 - TypeScript
 - eslint
 - prettier
-
-## Files
-
-- `index.ts`: plugin main file
-- `test/snapshot_test.ts`: test main file. should not edit this file.
-- `test/post_snapshots/`: post process test patterns. Please add folder if you need.
-- `test/pre_snapshots/`: pre process test patterns. Please add folder if you need.
 
 ## npm scripts
 
