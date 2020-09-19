@@ -23,32 +23,35 @@ async function postProcess(
     return (context: ts.TransformationContext) => (
         root: ts.SourceFile
     ): ts.SourceFile => {
-        return ts.visitNode(root, visit);
+        return ts.visitNode(root, rootVisit);
 
-        function visit(node: ts.Node): ts.Node {
+        /**
+         * Main purpose of this visitor e just to find the `Paths` **ModuleDeclaration**
+         */
+        function rootVisit(node: ts.Node): ts.Node {
             if (ts.isModuleDeclaration(node)) {
                 if (node.name.text === 'Paths') {
-                    return visitPathsBlock(node, context);
+                    return ts.visitEachChild(node, visitPathsBlock, context);
                 } else {
                     return node;
                 }
             } else {
-                return ts.visitEachChild(node, visit, context);
+                return ts.visitEachChild(node, rootVisit, context);
+            }
+        }
+
+        /**
+         * Process all the **ModuleBlock** children of the `Paths` **ModuleDeclaration**.
+         * Each of those **ModuleBlock**s represent a singe path.
+         */
+        function visitPathsBlock(node: ts.Node) {
+            if (ts.isModuleBlock(node)) {
+                return ts.visitEachChild(node, visitPathNode, context);
+            } else {
+                return node;
             }
         }
     };
-}
-
-/**
- * Process all the **ModuleBlock** children of the `Paths` **ModuleDeclaration**.
- * Each of those **ModuleBlock**s represent a singe path.
- */
-function visitPathsBlock(node: ts.Node, context: ts.TransformationContext) {
-    if (ts.isModuleBlock(node)) {
-        return ts.visitEachChild(node, visitPathNode, context);
-    } else {
-        return node;
-    }
 }
 
 /**
@@ -143,7 +146,6 @@ function getHandlerParamType(
 
     if (paramNode) {
         if (param === 'Responses') {
-            console.log('RESPSPSPSPSP');
             const responsesBody = (paramNode as ts.ModuleDeclaration).body;
             if (responsesBody && ts.isModuleBlock(responsesBody)) {
                 return ts.createUnionTypeNode(
