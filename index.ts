@@ -23,6 +23,12 @@ async function postProcess(
     return (context: ts.TransformationContext) => (
         root: ts.SourceFile
     ): ts.SourceFile => {
+        // add ` import { RequestHanlder } from 'express' `
+        root.statements = ts.createNodeArray([
+            createImportStatement(),
+            ...root.statements,
+        ]);
+
         return ts.visitNode(root, rootVisit);
 
         /**
@@ -170,6 +176,22 @@ function getHandlerParamType(
     } else {
         return ts.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
     }
+}
+
+function createImportStatement() {
+    const namedImport = ts.createNamedImports([
+        ts.createImportSpecifier(
+            undefined,
+            ts.createIdentifier('RequestHandler')
+        ),
+    ]);
+    const importExpress = ts.createImportDeclaration(
+        undefined,
+        undefined,
+        ts.createImportClause(undefined, namedImport),
+        ts.createStringLiteral('expression')
+    );
+    return importExpress;
 }
 
 export default plugin;

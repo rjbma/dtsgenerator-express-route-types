@@ -20,6 +20,10 @@ function postProcess(_) {
     return tslib_1.__awaiter(this, void 0, void 0, function () {
         return tslib_1.__generator(this, function (_a) {
             return [2 /*return*/, function (context) { return function (root) {
+                    // add ` import { RequestHanlder } from 'express' `
+                    root.statements = typescript_1.default.createNodeArray(tslib_1.__spread([
+                        createImportStatement()
+                    ], root.statements));
                     return typescript_1.default.visitNode(root, rootVisit);
                     /**
                      * Main purpose of this visitor e just to find the `Paths` **ModuleDeclaration**
@@ -135,5 +139,12 @@ function getHandlerParamType(pathNode, pathName, param) {
     else {
         return typescript_1.default.createKeywordTypeNode(typescript_1.default.SyntaxKind.AnyKeyword);
     }
+}
+function createImportStatement() {
+    var namedImport = typescript_1.default.createNamedImports([
+        typescript_1.default.createImportSpecifier(undefined, typescript_1.default.createIdentifier('RequestHandler')),
+    ]);
+    var importExpress = typescript_1.default.createImportDeclaration(undefined, undefined, typescript_1.default.createImportClause(undefined, namedImport), typescript_1.default.createStringLiteral('expression'));
+    return importExpress;
 }
 exports.default = plugin;
