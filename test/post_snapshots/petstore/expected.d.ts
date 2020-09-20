@@ -1,3 +1,5 @@
+import { RequestHandler } from 'express';
+
 declare namespace Components {
     namespace Schemas {
         export interface Error {
@@ -19,10 +21,15 @@ declare namespace Paths {
     namespace AddPet {
         export type RequestBody = Components.Schemas.NewPet;
         namespace Responses {
-            export type $200 = Components.Schemas.Pet;
-            export type Default = Components.Schemas.Error;
+            export interface $200 {}
+            export type Default = {};
         }
-        type RouteHandler = RequestHandler<any, Paths.AddPet.Responses.$200 | Paths.AddPet.Responses.Default, Paths.AddPet.RequestBody, any>;
+        type RouteHandler = RequestHandler<
+            any,
+            Paths.AddPet.Responses.$200 | Paths.AddPet.Responses.Default,
+            Paths.AddPet.RequestBody,
+            any
+        >;
     }
     namespace DeletePet {
         namespace Parameters {
@@ -34,7 +41,12 @@ declare namespace Paths {
         namespace Responses {
             export type Default = Components.Schemas.Error;
         }
-        type RouteHandler = RequestHandler<Paths.DeletePet.PathParameters, Paths.DeletePet.Responses.Default, any, any>;
+        type RouteHandler = RequestHandler<
+            Paths.DeletePet.PathParameters,
+            Paths.DeletePet.Responses.Default,
+            any,
+            any
+        >;
     }
     namespace FindPetById {
         namespace Parameters {
@@ -47,7 +59,13 @@ declare namespace Paths {
             export type $200 = Components.Schemas.Pet;
             export type Default = Components.Schemas.Error;
         }
-        type RouteHandler = RequestHandler<Paths.FindPetById.PathParameters, Paths.FindPetById.Responses.$200 | Paths.FindPetById.Responses.Default, any, any>;
+        type RouteHandler = RequestHandler<
+            Paths.FindPetById.PathParameters,
+            | Paths.FindPetById.Responses.$200
+            | Paths.FindPetById.Responses.Default,
+            any,
+            any
+        >;
     }
     namespace FindPets {
         namespace Parameters {
@@ -62,6 +80,11 @@ declare namespace Paths {
             export type $200 = Components.Schemas.Pet[];
             export type Default = Components.Schemas.Error;
         }
-        type RouteHandler = RequestHandler<any, Paths.FindPets.Responses.$200 | Paths.FindPets.Responses.Default, any, Paths.FindPets.QueryParameters>;
+        type RouteHandler = RequestHandler<
+            any,
+            Paths.FindPets.Responses.$200 | Paths.FindPets.Responses.Default,
+            any,
+            Paths.FindPets.QueryParameters
+        >;
     }
 }

@@ -149,14 +149,15 @@ function getHandlerParamType(
             const responsesBody = (paramNode as ts.ModuleDeclaration).body;
             if (responsesBody && ts.isModuleBlock(responsesBody)) {
                 return ts.createUnionTypeNode(
-                    responsesBody.statements.map((s) =>
-                        ts.createTypeReferenceNode(
-                            `Paths.${pathName}.${param}.${
-                                ts.isTypeAliasDeclaration(s) ? s.name.text : ''
-                            }`,
-                            undefined
+                    responsesBody.statements
+                        .map((s) =>
+                            ts.isTypeAliasDeclaration(s) ||
+                            ts.isInterfaceDeclaration(s)
+                                ? `Paths.${pathName}.${param}.${s.name.text}`
+                                : ''
                         )
-                    )
+                        .filter((n) => !!n)
+                        .map((n) => ts.createTypeReferenceNode(n, undefined))
                 );
             }
             return ts.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);

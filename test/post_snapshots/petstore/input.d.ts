@@ -20,8 +20,8 @@ declare namespace Paths {
     namespace AddPet {
         export type RequestBody = Components.Schemas.NewPet;
         namespace Responses {
-            export type $200 = Components.Schemas.Pet;
-            export type Default = Components.Schemas.Error;
+            export interface $200 {}
+            export type Default = {};
         }
     }
     namespace DeletePet {

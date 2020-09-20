@@ -116,9 +116,15 @@ function getHandlerParamType(pathNode, pathName, param) {
         if (param === 'Responses') {
             var responsesBody = paramNode.body;
             if (responsesBody && typescript_1.default.isModuleBlock(responsesBody)) {
-                return typescript_1.default.createUnionTypeNode(responsesBody.statements.map(function (s) {
-                    return typescript_1.default.createTypeReferenceNode("Paths." + pathName + "." + param + "." + (typescript_1.default.isTypeAliasDeclaration(s) ? s.name.text : ''), undefined);
-                }));
+                return typescript_1.default.createUnionTypeNode(responsesBody.statements
+                    .map(function (s) {
+                    return typescript_1.default.isTypeAliasDeclaration(s) ||
+                        typescript_1.default.isInterfaceDeclaration(s)
+                        ? "Paths." + pathName + "." + param + "." + s.name.text
+                        : '';
+                })
+                    .filter(function (n) { return !!n; })
+                    .map(function (n) { return typescript_1.default.createTypeReferenceNode(n, undefined); }));
             }
             return typescript_1.default.createKeywordTypeNode(typescript_1.default.SyntaxKind.AnyKeyword);
         }
