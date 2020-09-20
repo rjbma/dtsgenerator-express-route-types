@@ -1,4 +1,4 @@
-import { RequestHandler } from "expression";
+import { RequestHandler } from "express";
 declare namespace Components {
     namespace Schemas {
         export interface Error {

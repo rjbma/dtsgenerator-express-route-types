@@ -189,7 +189,7 @@ function createImportStatement() {
         undefined,
         undefined,
         ts.createImportClause(undefined, namedImport),
-        ts.createStringLiteral('expression')
+        ts.createStringLiteral('express')
     );
     return importExpress;
 }

@@ -144,7 +144,7 @@ function createImportStatement() {
     var namedImport = typescript_1.default.createNamedImports([
         typescript_1.default.createImportSpecifier(undefined, typescript_1.default.createIdentifier('RequestHandler')),
     ]);
-    var importExpress = typescript_1.default.createImportDeclaration(undefined, undefined, typescript_1.default.createImportClause(undefined, namedImport), typescript_1.default.createStringLiteral('expression'));
+    var importExpress = typescript_1.default.createImportDeclaration(undefined, undefined, typescript_1.default.createImportClause(undefined, namedImport), typescript_1.default.createStringLiteral('express'));
     return importExpress;
 }
 exports.default = plugin;
