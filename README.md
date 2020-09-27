@@ -3,10 +3,10 @@
 This is a `dtsgenerator` plugin for generating types for **Express** route handlers. 
 
 For each route specified under the `Paths` namespace, this plugin will look for types (``PathParameters``, 
-``Responses``, ``RequestBody`` and ``QueryParameters``) that are defined for that path, and use `any` for those 
+``Responses``, ``RequestBody`` and ``QueryParameters``) that are defined for that path, and use `unknown` (or `any`) for those 
 types that can't be found.
 
-For example, for a path like `DeletePet`:
+For example, for a path like `DeletePet` (note it doesn't defined types for query parameters and body payload):
 
 ```typescript
 declare namespace Paths {
@@ -26,10 +26,32 @@ declare namespace Paths {
 }
 ```
 
-the pluging would would add the following type:
+and a config object like:
+
+```json
+{
+    "placeholderType": "any",
+    "routeTypeName": "RouteHandler",
+}
+
+
+the plugin would add the following type:
 
 ```typescript
 type RouteHandler = RequestHandler<Paths.DeletePet.PathParameters, Paths.DeletePet.Responses.Default, any, any>;
+```
+
+The type can then be used to add static type checking to a route's path parameters, query parameters, body payload, and responses. For example:
+
+```typescript
+const app = express(); // Invoke express to variable for use in application
+const route: Paths.DeletePet.RouteHandler = (req, res, next) => {
+  req.params.id; // OK. also, `id` is of type `number`
+  req.params.name; // NOK, `name` is not a valid param
+  res.status(500).json({ message: '33434' }); // OK
+  res.status(500).json("something went wrong"); // NOK, `Components.Schemas.Error` does not allow a string
+  // the same would happen with `req.query` and `req.body`
+};
 ```
 
 # Install
@@ -40,11 +62,19 @@ npm install dtsgenerator-express-route-types
 
 # Usage
 
+The configuration object for the plugin takes two parameters:
+
+- `placeholderType` specifies which type should be used when the type for some parameter isn't defined. Only `unknown` and `any` are supported
+- `routeTypeName` specifies the name of the type that the plugin creates
+
 `dtsgen.json`
 ```json
 {
     "plugins": {
-        "dtsgenerator-express-route-types": true, // or { config object }
+        "dtsgenerator-express-route-types": {
+            "placeholderType": "unknown", // or "any"
+            "routeTypeName": "Route", // whatever name you want for the express request handler type
+        }
     }
 }
 ```

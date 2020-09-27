@@ -17,12 +17,28 @@ const plugin: Plugin = {
     postProcess,
 };
 
+interface Config {
+    placeholderType: 'any' | 'unknown';
+    routeTypeName: string;
+}
+
+const defaultConfig: Config = {
+    placeholderType: 'unknown',
+    routeTypeName: 'Route',
+};
+
 async function postProcess(
     _: PluginContext
 ): Promise<ts.TransformerFactory<ts.SourceFile> | undefined> {
     return (context: ts.TransformationContext) => (
         root: ts.SourceFile
     ): ts.SourceFile => {
+        const rawConfig = loadConfig(_.option, defaultConfig);
+        if (!rawConfig) {
+            return root;
+        }
+        const config = rawConfig as Config;
+
         // add ` import { RequestHanlder } from 'express' `
         root.statements = ts.createNodeArray([
             createImportStatement(),
@@ -57,86 +73,96 @@ async function postProcess(
                 return node;
             }
         }
-    };
-}
 
-/**
- * Process a single path node, by adding a type declaration for the **Express** route handler.
- *
- * This will look for types (path parameters, responses, request body and query parameters) that are
- * defined for the path, and use `any` for those types that can't be found.
- *
- * For example, for a path like:
- *
- * ```
- * namespace DeletePet {
- *      namespace Parameters {
- *          export type Id = number; // int64
- *      }
- *      export interface PathParameters {
- *          id: Parameters.Id;
- *      }
- *      namespace Responses {
- *          export type Default = Components.Schemas.Error;
- *      }
- *  }
- * ```
- *
- * would produce:
- *
- * ```
- * type RouteHandler = RequestHandler<Paths.DeletePet.PathParameters, Paths.DeletePet.Responses.Default, any, any>;
- * ```
- *
- */
-function visitPathNode(node: ts.Node): ts.Node {
-    if (ts.isModuleDeclaration(node)) {
-        if (node.body && ts.isModuleBlock(node.body)) {
-            node.body.statements = ts.createNodeArray([
-                ...node.body.statements,
-                ts.createTypeAliasDeclaration(
-                    undefined,
-                    undefined,
-                    'RouteHandler',
-                    undefined,
-                    ts.createTypeReferenceNode('RequestHandler', [
-                        // path parameters
-                        getHandlerParamType(
-                            node.body,
-                            node.name.text,
-                            'PathParameters'
+        /**
+         * Process a single path node, by adding a type declaration for the **Express** route handler.
+         *
+         * This will look for types (path parameters, responses, request body and query parameters) that are
+         * defined for the path, and use `any` for those types that can't be found.
+         *
+         * For example, for a path like:
+         *
+         * ```
+         * namespace DeletePet {
+         *      namespace Parameters {
+         *          export type Id = number; // int64
+         *      }
+         *      export interface PathParameters {
+         *          id: Parameters.Id;
+         *      }
+         *      namespace Responses {
+         *          export type Default = Components.Schemas.Error;
+         *      }
+         *  }
+         * ```
+         *
+         * would produce:
+         *
+         * ```
+         * type RouteHandler = RequestHandler<Paths.DeletePet.PathParameters, Paths.DeletePet.Responses.Default, any, any>;
+         * ```
+         *
+         */
+        function visitPathNode(node: ts.Node): ts.Node {
+            if (ts.isModuleDeclaration(node)) {
+                if (node.body && ts.isModuleBlock(node.body)) {
+                    node.body.statements = ts.createNodeArray([
+                        ...node.body.statements,
+                        ts.createTypeAliasDeclaration(
+                            undefined,
+                            undefined,
+                            config.routeTypeName,
+                            undefined,
+                            ts.createTypeReferenceNode('RequestHandler', [
+                                // path parameters
+                                getHandlerParamType(
+                                    node.body,
+                                    node.name.text,
+                                    'PathParameters',
+                                    config
+                                ),
+                                // response body
+                                getHandlerParamType(
+                                    node.body,
+                                    node.name.text,
+                                    'Responses',
+                                    config
+                                ),
+                                // request body
+                                getHandlerParamType(
+                                    node.body,
+                                    node.name.text,
+                                    'RequestBody',
+                                    config
+                                ),
+                                // query parameters
+                                getHandlerParamType(
+                                    node.body,
+                                    node.name.text,
+                                    'QueryParameters',
+                                    config
+                                ),
+                            ])
                         ),
-                        // response body
-                        getHandlerParamType(
-                            node.body,
-                            node.name.text,
-                            'Responses'
-                        ),
-                        // request body
-                        getHandlerParamType(
-                            node.body,
-                            node.name.text,
-                            'RequestBody'
-                        ),
-                        // query parameters
-                        getHandlerParamType(
-                            node.body,
-                            node.name.text,
-                            'QueryParameters'
-                        ),
-                    ])
-                ),
-            ]);
+                    ]);
+                }
+            }
+            return node;
         }
-    }
-    return node;
+    };
 }
 
 function getHandlerParamType(
     pathNode: ts.ModuleBlock,
     pathName: string,
-    param: 'PathParameters' | 'Responses' | 'RequestBody' | 'QueryParameters'
+    param: 'PathParameters' | 'Responses' | 'RequestBody' | 'QueryParameters',
+    config: Config
 ) {
+    const placeholderType =
+        config.placeholderType == 'any'
+            ? ts.SyntaxKind.AnyKeyword
+            : ts.SyntaxKind.UnknownKeyword;
+
     // see if there is a `RequestBody` type for this path
     // pathNode.statements.filter(s => ts.isTypeReferenceNode(s) && s.typeName.getFullText() == '')
     const paramNode = pathNode.statements.find((s) => {
@@ -166,7 +192,7 @@ function getHandlerParamType(
                         .map((n) => ts.createTypeReferenceNode(n, undefined))
                 );
             }
-            return ts.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+            return ts.createKeywordTypeNode(placeholderType);
         } else {
             return ts.createTypeReferenceNode(
                 `Paths.${pathName}.${param}`,
@@ -174,7 +200,7 @@ function getHandlerParamType(
             );
         }
     } else {
-        return ts.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+        return ts.createKeywordTypeNode(placeholderType);
     }
 }
 
@@ -192,6 +218,25 @@ function createImportStatement() {
         ts.createStringLiteral('express')
     );
     return importExpress;
+}
+
+function loadConfig(
+    config: boolean | Record<string, unknown>,
+    defaultConfig: Config
+) {
+    if (!config) {
+        // plugin is not enabled
+        return false;
+    } else if (config == true) {
+        return defaultConfig;
+    } else {
+        return {
+            placeholderType:
+                config['defaultConfig'] || defaultConfig.placeholderType,
+            routeTypeName:
+                config['routeTypeName'] || defaultConfig.routeTypeName,
+        } as Config;
+    }
 }
 
 export default plugin;

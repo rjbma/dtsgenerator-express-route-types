@@ -24,7 +24,7 @@ declare namespace Paths {
             }
             export type Default = {};
         }
-        type RouteHandler = RequestHandler<any, Paths.AddPet.Responses.$200 | Paths.AddPet.Responses.Default, Paths.AddPet.RequestBody, any>;
+        type Route = RequestHandler<unknown, Paths.AddPet.Responses.$200 | Paths.AddPet.Responses.Default, Paths.AddPet.RequestBody, unknown>;
     }
     namespace DeletePet {
         namespace Parameters {
@@ -36,7 +36,7 @@ declare namespace Paths {
         namespace Responses {
             export type Default = Components.Schemas.Error;
         }
-        type RouteHandler = RequestHandler<Paths.DeletePet.PathParameters, Paths.DeletePet.Responses.Default, any, any>;
+        type Route = RequestHandler<Paths.DeletePet.PathParameters, Paths.DeletePet.Responses.Default, unknown, unknown>;
     }
     namespace FindPetById {
         namespace Parameters {
@@ -49,7 +49,7 @@ declare namespace Paths {
             export type $200 = Components.Schemas.Pet;
             export type Default = Components.Schemas.Error;
         }
-        type RouteHandler = RequestHandler<Paths.FindPetById.PathParameters, Paths.FindPetById.Responses.$200 | Paths.FindPetById.Responses.Default, any, any>;
+        type Route = RequestHandler<Paths.FindPetById.PathParameters, Paths.FindPetById.Responses.$200 | Paths.FindPetById.Responses.Default, unknown, unknown>;
     }
     namespace FindPets {
         namespace Parameters {
@@ -64,6 +64,6 @@ declare namespace Paths {
             export type $200 = Components.Schemas.Pet[];
             export type Default = Components.Schemas.Error;
         }
-        type RouteHandler = RequestHandler<any, Paths.FindPets.Responses.$200 | Paths.FindPets.Responses.Default, any, Paths.FindPets.QueryParameters>;
+        type Route = RequestHandler<unknown, Paths.FindPets.Responses.$200 | Paths.FindPets.Responses.Default, unknown, Paths.FindPets.QueryParameters>;
     }
 }
