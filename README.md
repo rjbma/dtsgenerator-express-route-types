@@ -33,15 +33,24 @@ and a config object like:
     "placeholderType": "any",
     "routeTypeName": "RouteHandler",
 }
+```
 
 
-the plugin would add the following type:
+the plugin would add the following types:
 
 ```typescript
 type RouteHandler = RequestHandler<Paths.DeletePet.PathParameters, Paths.DeletePet.Responses.Default, any, any>;
+
+interface RouteConfig {
+    path: Paths.DeletePet.PathParameters;
+    responses: Paths.DeletePet.Responses.Default;
+    request?: unknown;
+    query?: unknown;
+    headers?: unknown;
+}
 ```
 
-The type can then be used to add static type checking to a route's path parameters, query parameters, body payload, and responses. For example:
+The `RouteHandler` type can be used to add static type checking to a route's path parameters, query parameters, body payload, and responses. For example:
 
 ```typescript
 const app = express(); // Invoke express to variable for use in application
@@ -53,6 +62,8 @@ const route: Paths.DeletePet.RouteHandler = (req, res, next) => {
   // the same would happen with `req.query` and `req.body`
 };
 ```
+
+The `RouteConfig` interface is more flexible, and can be used to add static type checking to both server and client implementations.
 
 # Install
 

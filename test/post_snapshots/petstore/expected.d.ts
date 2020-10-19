@@ -24,6 +24,13 @@ declare namespace Paths {
             }
             export type Default = {};
         }
+        interface Config {
+            pathParams?: unknown;
+            responses: Paths.AddPet.Responses.$200 | Paths.AddPet.Responses.Default;
+            requestBody: Paths.AddPet.RequestBody;
+            queryParams?: unknown;
+            headers?: unknown;
+        }
         type Route = RequestHandler<unknown, Paths.AddPet.Responses.$200 | Paths.AddPet.Responses.Default, Paths.AddPet.RequestBody, unknown>;
     }
     namespace DeletePet {
@@ -35,6 +42,13 @@ declare namespace Paths {
         }
         namespace Responses {
             export type Default = Components.Schemas.Error;
+        }
+        interface Config {
+            pathParams: Paths.DeletePet.PathParameters;
+            responses: Paths.DeletePet.Responses.Default;
+            requestBody?: unknown;
+            queryParams?: unknown;
+            headers?: unknown;
         }
         type Route = RequestHandler<Paths.DeletePet.PathParameters, Paths.DeletePet.Responses.Default, unknown, unknown>;
     }
@@ -48,6 +62,13 @@ declare namespace Paths {
         namespace Responses {
             export type $200 = Components.Schemas.Pet;
             export type Default = Components.Schemas.Error;
+        }
+        interface Config {
+            pathParams: Paths.FindPetById.PathParameters;
+            responses: Paths.FindPetById.Responses.$200 | Paths.FindPetById.Responses.Default;
+            requestBody?: unknown;
+            queryParams?: unknown;
+            headers?: unknown;
         }
         type Route = RequestHandler<Paths.FindPetById.PathParameters, Paths.FindPetById.Responses.$200 | Paths.FindPetById.Responses.Default, unknown, unknown>;
     }
@@ -63,6 +84,13 @@ declare namespace Paths {
         namespace Responses {
             export type $200 = Components.Schemas.Pet[];
             export type Default = Components.Schemas.Error;
+        }
+        interface Config {
+            pathParams?: unknown;
+            responses: Paths.FindPets.Responses.$200 | Paths.FindPets.Responses.Default;
+            requestBody?: unknown;
+            queryParams: Paths.FindPets.QueryParameters;
+            headers?: unknown;
         }
         type Route = RequestHandler<unknown, Paths.FindPets.Responses.$200 | Paths.FindPets.Responses.Default, unknown, Paths.FindPets.QueryParameters>;
     }

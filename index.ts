@@ -28,16 +28,17 @@ const defaultConfig: Config = {
 };
 
 async function postProcess(
-    _: PluginContext
+    pluginContext: PluginContext
 ): Promise<ts.TransformerFactory<ts.SourceFile> | undefined> {
     return (context: ts.TransformationContext) => (
         root: ts.SourceFile
     ): ts.SourceFile => {
-        const rawConfig = loadConfig(_.option, defaultConfig);
+        const rawConfig = loadConfig(pluginContext.option, defaultConfig);
         if (!rawConfig) {
             return root;
         }
         const config = rawConfig as Config;
+        const allMetadata = getOperationMetadata(pluginContext);
 
         // add ` import { RequestHanlder } from 'express' `
         root.statements = ts.createNodeArray([
@@ -106,42 +107,100 @@ async function postProcess(
         function visitPathNode(node: ts.Node): ts.Node {
             if (ts.isModuleDeclaration(node)) {
                 if (node.body && ts.isModuleBlock(node.body)) {
+                    const placeholderType =
+                        config.placeholderType == 'any'
+                            ? ts.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword)
+                            : ts.createKeywordTypeNode(
+                                  ts.SyntaxKind.UnknownKeyword
+                              );
+                    // helper for getting the TS type for a specific param type (path, query, request body, response body)
+                    const paramGetter = getHandlerParamType(
+                        node.body,
+                        node.name.text,
+                        placeholderType
+                    );
+                    // helper for create an interface property for a specific param type
+                    const createInterfaceProp = (
+                        propName: string,
+                        typeNode: ts.TypeNode
+                    ) =>
+                        ts.createPropertySignature(
+                            undefined,
+                            propName,
+                            typeNode === placeholderType
+                                ? ts.createToken(ts.SyntaxKind.QuestionToken)
+                                : undefined,
+                            typeNode,
+                            undefined
+                        );
+                    const createMetadataProp = (
+                        metadata: OperationMetadata,
+                        prop: keyof OperationMetadata
+                    ) =>
+                        ts.createPropertySignature(
+                            undefined,
+                            prop,
+                            undefined,
+                            ts.createLiteralTypeNode(
+                                ts.createStringLiteral(metadata[prop])
+                            ),
+                            undefined
+                        );
+
+                    const pathParamsType = paramGetter('PathParameters');
+                    const responsesType = paramGetter('Responses');
+                    const bodyType = paramGetter('RequestBody');
+                    const queryParamsType = paramGetter('QueryParameters');
+                    const headersParamsType = paramGetter('HeaderParameters');
+                    const metadata = allMetadata[node.name.text];
+                    const metadataProps = metadata
+                        ? [
+                              createMetadataProp(metadata, 'operationId'),
+                              createMetadataProp(metadata, 'method'),
+                              createMetadataProp(metadata, 'expressPath'),
+                              createMetadataProp(metadata, 'openapiPath'),
+                          ]
+                        : [];
+
                     node.body.statements = ts.createNodeArray([
+                        // keep all statements already under the path's namespace
                         ...node.body.statements,
+                        // add an interface that completely describes the path (method, params including headers, etc.)
+                        ts.createInterfaceDeclaration(
+                            undefined,
+                            undefined,
+                            'Config',
+                            undefined,
+                            undefined,
+                            [
+                                ...metadataProps,
+                                createInterfaceProp(
+                                    'pathParams',
+                                    pathParamsType
+                                ),
+                                createInterfaceProp('responses', responsesType),
+                                createInterfaceProp('requestBody', bodyType),
+                                createInterfaceProp(
+                                    'queryParams',
+                                    queryParamsType
+                                ),
+                                createInterfaceProp(
+                                    'headers',
+                                    headersParamsType
+                                ),
+                            ]
+                        ),
+                        // add a type that can be used in an Express route
                         ts.createTypeAliasDeclaration(
                             undefined,
                             undefined,
                             config.routeTypeName,
                             undefined,
                             ts.createTypeReferenceNode('RequestHandler', [
-                                // path parameters
-                                getHandlerParamType(
-                                    node.body,
-                                    node.name.text,
-                                    'PathParameters',
-                                    config
-                                ),
-                                // response body
-                                getHandlerParamType(
-                                    node.body,
-                                    node.name.text,
-                                    'Responses',
-                                    config
-                                ),
-                                // request body
-                                getHandlerParamType(
-                                    node.body,
-                                    node.name.text,
-                                    'RequestBody',
-                                    config
-                                ),
-                                // query parameters
-                                getHandlerParamType(
-                                    node.body,
-                                    node.name.text,
-                                    'QueryParameters',
-                                    config
-                                ),
+                                pathParamsType,
+                                responsesType,
+                                bodyType,
+                                queryParamsType,
                             ])
                         ),
                     ]);
@@ -152,17 +211,18 @@ async function postProcess(
     };
 }
 
-function getHandlerParamType(
+const getHandlerParamType = (
     pathNode: ts.ModuleBlock,
     pathName: string,
-    param: 'PathParameters' | 'Responses' | 'RequestBody' | 'QueryParameters',
-    config: Config
-) {
-    const placeholderType =
-        config.placeholderType == 'any'
-            ? ts.SyntaxKind.AnyKeyword
-            : ts.SyntaxKind.UnknownKeyword;
-
+    placeholderType: ts.KeywordTypeNode
+) => (
+    param:
+        | 'PathParameters'
+        | 'Responses'
+        | 'RequestBody'
+        | 'QueryParameters'
+        | 'HeaderParameters'
+) => {
     // see if there is a `RequestBody` type for this path
     // pathNode.statements.filter(s => ts.isTypeReferenceNode(s) && s.typeName.getFullText() == '')
     const paramNode = pathNode.statements.find((s) => {
@@ -192,7 +252,7 @@ function getHandlerParamType(
                         .map((n) => ts.createTypeReferenceNode(n, undefined))
                 );
             }
-            return ts.createKeywordTypeNode(placeholderType);
+            return placeholderType;
         } else {
             return ts.createTypeReferenceNode(
                 `Paths.${pathName}.${param}`,
@@ -200,9 +260,9 @@ function getHandlerParamType(
             );
         }
     } else {
-        return ts.createKeywordTypeNode(placeholderType);
+        return placeholderType;
     }
-}
+};
 
 function createImportStatement() {
     const namedImport = ts.createNamedImports([
@@ -238,5 +298,49 @@ function loadConfig(
         } as Config;
     }
 }
+
+interface OperationMetadata {
+    // the operationId as defined in the OpenAPI spec
+    operationId: string;
+    // path in OpenAPI format (ie, /users/{userId})
+    openapiPath: string;
+    // path in Express.js format (ie, /users/:userId)
+    expressPath: string;
+    // method, lower case (get, post, etc.)
+    method: string;
+}
+/**
+ * Get the path and method for each operation in the OpenAPI spec.
+ */
+function getOperationMetadata(pluginContext: PluginContext) {
+    // the implementation of this this whole function is really ugly
+    // there surely is some better way to implement the whole thing!
+    const result: Record<string, OperationMetadata> = {};
+    if (pluginContext.inputSchemas) {
+        let paths: any = {};
+        let done = false;
+        do {
+            const iter = pluginContext.inputSchemas.next();
+            paths = iter.value[1].rootSchema?.content?.paths || {};
+            done = !!iter.done;
+        } while (done);
+
+        Object.keys(paths).forEach((path) =>
+            Object.keys(paths[path]).forEach((method) => {
+                const pathParamRegex = /{([^}]+)}/g;
+                const operationId = paths[path][method].operationId;
+                result[capitalize(operationId)] = {
+                    operationId,
+                    openapiPath: path,
+                    expressPath: path.replace(pathParamRegex, ':$1'),
+                    method,
+                };
+            })
+        );
+    }
+    return result;
+}
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.substring(1);
 
 export default plugin;

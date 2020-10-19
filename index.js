@@ -20,15 +20,16 @@ var defaultConfig = {
     placeholderType: 'unknown',
     routeTypeName: 'Route',
 };
-function postProcess(_) {
+function postProcess(pluginContext) {
     return tslib_1.__awaiter(this, void 0, void 0, function () {
         return tslib_1.__generator(this, function (_a) {
             return [2 /*return*/, function (context) { return function (root) {
-                    var rawConfig = loadConfig(_.option, defaultConfig);
+                    var rawConfig = loadConfig(pluginContext.option, defaultConfig);
                     if (!rawConfig) {
                         return root;
                     }
                     var config = rawConfig;
+                    var allMetadata = getOperationMetadata(pluginContext);
                     // add ` import { RequestHanlder } from 'express' `
                     root.statements = typescript_1.default.createNodeArray(tslib_1.__spread([
                         createImportStatement()
@@ -94,16 +95,49 @@ function postProcess(_) {
                     function visitPathNode(node) {
                         if (typescript_1.default.isModuleDeclaration(node)) {
                             if (node.body && typescript_1.default.isModuleBlock(node.body)) {
+                                var placeholderType_1 = config.placeholderType == 'any'
+                                    ? typescript_1.default.createKeywordTypeNode(typescript_1.default.SyntaxKind.AnyKeyword)
+                                    : typescript_1.default.createKeywordTypeNode(typescript_1.default.SyntaxKind.UnknownKeyword);
+                                // helper for getting the TS type for a specific param type (path, query, request body, response body)
+                                var paramGetter = getHandlerParamType(node.body, node.name.text, placeholderType_1);
+                                // helper for create an interface property for a specific param type
+                                var createInterfaceProp = function (propName, typeNode) {
+                                    return typescript_1.default.createPropertySignature(undefined, propName, typeNode === placeholderType_1
+                                        ? typescript_1.default.createToken(typescript_1.default.SyntaxKind.QuestionToken)
+                                        : undefined, typeNode, undefined);
+                                };
+                                var createMetadataProp = function (metadata, prop) {
+                                    return typescript_1.default.createPropertySignature(undefined, prop, undefined, typescript_1.default.createLiteralTypeNode(typescript_1.default.createStringLiteral(metadata[prop])), undefined);
+                                };
+                                var pathParamsType = paramGetter('PathParameters');
+                                var responsesType = paramGetter('Responses');
+                                var bodyType = paramGetter('RequestBody');
+                                var queryParamsType = paramGetter('QueryParameters');
+                                var headersParamsType = paramGetter('HeaderParameters');
+                                var metadata = allMetadata[node.name.text];
+                                var metadataProps = metadata
+                                    ? [
+                                        createMetadataProp(metadata, 'operationId'),
+                                        createMetadataProp(metadata, 'method'),
+                                        createMetadataProp(metadata, 'expressPath'),
+                                        createMetadataProp(metadata, 'openapiPath'),
+                                    ]
+                                    : [];
                                 node.body.statements = typescript_1.default.createNodeArray(tslib_1.__spread(node.body.statements, [
+                                    // add an interface that completely describes the path (method, params including headers, etc.)
+                                    typescript_1.default.createInterfaceDeclaration(undefined, undefined, 'Config', undefined, undefined, tslib_1.__spread(metadataProps, [
+                                        createInterfaceProp('pathParams', pathParamsType),
+                                        createInterfaceProp('responses', responsesType),
+                                        createInterfaceProp('requestBody', bodyType),
+                                        createInterfaceProp('queryParams', queryParamsType),
+                                        createInterfaceProp('headers', headersParamsType),
+                                    ])),
+                                    // add a type that can be used in an Express route
                                     typescript_1.default.createTypeAliasDeclaration(undefined, undefined, config.routeTypeName, undefined, typescript_1.default.createTypeReferenceNode('RequestHandler', [
-                                        // path parameters
-                                        getHandlerParamType(node.body, node.name.text, 'PathParameters', config),
-                                        // response body
-                                        getHandlerParamType(node.body, node.name.text, 'Responses', config),
-                                        // request body
-                                        getHandlerParamType(node.body, node.name.text, 'RequestBody', config),
-                                        // query parameters
-                                        getHandlerParamType(node.body, node.name.text, 'QueryParameters', config),
+                                        pathParamsType,
+                                        responsesType,
+                                        bodyType,
+                                        queryParamsType,
                                     ])),
                                 ]));
                             }
@@ -114,10 +148,7 @@ function postProcess(_) {
         });
     });
 }
-function getHandlerParamType(pathNode, pathName, param, config) {
-    var placeholderType = config.placeholderType == 'any'
-        ? typescript_1.default.SyntaxKind.AnyKeyword
-        : typescript_1.default.SyntaxKind.UnknownKeyword;
+var getHandlerParamType = function (pathNode, pathName, placeholderType) { return function (param) {
     // see if there is a `RequestBody` type for this path
     // pathNode.statements.filter(s => ts.isTypeReferenceNode(s) && s.typeName.getFullText() == '')
     var paramNode = pathNode.statements.find(function (s) {
@@ -142,16 +173,16 @@ function getHandlerParamType(pathNode, pathName, param, config) {
                     .filter(function (n) { return !!n; })
                     .map(function (n) { return typescript_1.default.createTypeReferenceNode(n, undefined); }));
             }
-            return typescript_1.default.createKeywordTypeNode(placeholderType);
+            return placeholderType;
         }
         else {
             return typescript_1.default.createTypeReferenceNode("Paths." + pathName + "." + param, undefined);
         }
     }
     else {
-        return typescript_1.default.createKeywordTypeNode(placeholderType);
+        return placeholderType;
     }
-}
+}; };
 function createImportStatement() {
     var namedImport = typescript_1.default.createNamedImports([
         typescript_1.default.createImportSpecifier(undefined, typescript_1.default.createIdentifier('RequestHandler')),
@@ -174,4 +205,36 @@ function loadConfig(config, defaultConfig) {
         };
     }
 }
+/**
+ * Get the path and method for each operation in the OpenAPI spec.
+ */
+function getOperationMetadata(pluginContext) {
+    var _a, _b;
+    // the implementation of this this whole function is really ugly
+    // there surely is some better way to implement the whole thing!
+    var result = {};
+    if (pluginContext.inputSchemas) {
+        var paths_1 = {};
+        var done = false;
+        do {
+            var iter = pluginContext.inputSchemas.next();
+            paths_1 = ((_b = (_a = iter.value[1].rootSchema) === null || _a === void 0 ? void 0 : _a.content) === null || _b === void 0 ? void 0 : _b.paths) || {};
+            done = !!iter.done;
+        } while (done);
+        Object.keys(paths_1).forEach(function (path) {
+            return Object.keys(paths_1[path]).forEach(function (method) {
+                var pathParamRegex = /{([^}]+)}/g;
+                var operationId = paths_1[path][method].operationId;
+                result[capitalize(operationId)] = {
+                    operationId: operationId,
+                    openapiPath: path,
+                    expressPath: path.replace(pathParamRegex, ':$1'),
+                    method: method,
+                };
+            });
+        });
+    }
+    return result;
+}
+var capitalize = function (s) { return s.charAt(0).toUpperCase() + s.substring(1); };
 exports.default = plugin;

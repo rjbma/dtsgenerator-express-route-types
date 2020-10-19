@@ -126,6 +126,10 @@ describe('PostProcess Snapshot testing', () => {
                 const printer = ts.createPrinter();
                 const actual = printer.printFile(input);
 
+                // uncomment to build a file with the test's result
+                // const outputFilePath = path.join(fixtureDir, 'output.d.ts');
+                // fs.writeFileSync(outputFilePath, actual);
+
                 // When we do `UPDATE_SNAPSHOT=1 npm test`, update snapshot data.
                 if (process.env.UPDATE_SNAPSHOT) {
                     fs.writeFileSync(expectedFilePath, actual);
