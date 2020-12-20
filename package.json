@@ -1,7 +1,7 @@
 {
   "name": "dtsgenerator-express-route-types",
-  "version": "0.1.4",
-  "description": "PLEASE CHANGE THIS DESCRIPTION!!!",
+  "version": "0.1.5",
+  "description": "plugin for generating types for Express route handlers",
   "author": {
     "name": "rjbma"
   },
