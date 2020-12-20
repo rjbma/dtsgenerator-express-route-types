@@ -39,17 +39,19 @@ and a config object like:
 the plugin would add the following types:
 
 ```typescript
-type RouteHandler = RequestHandler<Paths.DeletePet.PathParameters, Paths.DeletePet.Responses.Default, any, any>;
+type RouteHandler = RequestHandler<Paths.DeletePet.PathParameters, Paths.DeletePet.Responses.Default, unknown, unknown>;
 
 interface RouteConfig {
-    path: Paths.DeletePet.PathParameters;
+    pathParams: Paths.DeletePet.PathParameters; // { id: number }
     responses: Paths.DeletePet.Responses.Default;
-    request?: unknown;
-    query?: unknown;
+    successResponses?: unknown;
+    requestBody?: unknown;
+    queryParams?: unknown;
     headers?: unknown;
 }
 ```
 
+## RouteHandler type
 The `RouteHandler` type can be used to add static type checking to a route's path parameters, query parameters, body payload, and responses. For example:
 
 ```typescript
@@ -63,7 +65,18 @@ const route: Paths.DeletePet.RouteHandler = (req, res, next) => {
 };
 ```
 
+## RouteConfig type
 The `RouteConfig` interface is more flexible, and can be used to add static type checking to both server and client implementations.
+
+The fields of this type will be optional and `unknown` whenever they don't apply to that specific route. For example, the **DeletePet** route from the example above doesn't specify any query parameters, so the `queryParams` field is optional.
+
+This interface has the following fields:
+- `pathParams` is be an object with a field for each of the route's path parameters (e.g., for `/example/{id}`, could be an object with type `{id: number}`)
+- `responses` is a union type with all valid responses for the route (both successes and failures)
+- `sucessResponses` is also a union type, but only contains types for... success responses (there is typically only one of those).
+- `requestBody` is the type of the request body
+- `queryParams` is be an object with a field for each of the route's query parameters (e.g., for `/example?userId=123&company=abc`, could be an object with type `{userId: number, company: string}`)
+- `headers` is an object with a field for each of the route's headers
 
 # Install
 

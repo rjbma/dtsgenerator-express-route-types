@@ -27,6 +27,7 @@ declare namespace Paths {
         interface Config {
             pathParams?: unknown;
             responses: Paths.AddPet.Responses.$200 | Paths.AddPet.Responses.Default;
+            successResponses: Paths.AddPet.Responses.$200;
             requestBody: Paths.AddPet.RequestBody;
             queryParams?: unknown;
             headers?: unknown;
@@ -46,6 +47,7 @@ declare namespace Paths {
         interface Config {
             pathParams: Paths.DeletePet.PathParameters;
             responses: Paths.DeletePet.Responses.Default;
+            successResponses?: unknown;
             requestBody?: unknown;
             queryParams?: unknown;
             headers?: unknown;
@@ -66,6 +68,7 @@ declare namespace Paths {
         interface Config {
             pathParams: Paths.FindPetById.PathParameters;
             responses: Paths.FindPetById.Responses.$200 | Paths.FindPetById.Responses.Default;
+            successResponses: Paths.FindPetById.Responses.$200;
             requestBody?: unknown;
             queryParams?: unknown;
             headers?: unknown;
@@ -88,6 +91,7 @@ declare namespace Paths {
         interface Config {
             pathParams?: unknown;
             responses: Paths.FindPets.Responses.$200 | Paths.FindPets.Responses.Default;
+            successResponses: Paths.FindPets.Responses.$200;
             requestBody?: unknown;
             queryParams: Paths.FindPets.QueryParameters;
             headers?: unknown;

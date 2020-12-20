@@ -16,6 +16,9 @@ var plugin = {
     },
     postProcess: postProcess,
 };
+var isNamedDeclaration = function (d) {
+    return typescript_1.default.isTypeAliasDeclaration(d) || typescript_1.default.isInterfaceDeclaration(d);
+};
 var defaultConfig = {
     placeholderType: 'unknown',
     routeTypeName: 'Route',
@@ -111,6 +114,7 @@ function postProcess(pluginContext) {
                                 };
                                 var pathParamsType = paramGetter('PathParameters');
                                 var responsesType = paramGetter('Responses');
+                                var successResponsesType = paramGetter('SuccessResponses');
                                 var bodyType = paramGetter('RequestBody');
                                 var queryParamsType = paramGetter('QueryParameters');
                                 var headersParamsType = paramGetter('HeaderParameters');
@@ -128,6 +132,7 @@ function postProcess(pluginContext) {
                                     typescript_1.default.createInterfaceDeclaration(undefined, undefined, 'Config', undefined, undefined, tslib_1.__spread(metadataProps, [
                                         createInterfaceProp('pathParams', pathParamsType),
                                         createInterfaceProp('responses', responsesType),
+                                        createInterfaceProp('successResponses', successResponsesType),
                                         createInterfaceProp('requestBody', bodyType),
                                         createInterfaceProp('queryParams', queryParamsType),
                                         createInterfaceProp('headers', headersParamsType),
@@ -149,40 +154,69 @@ function postProcess(pluginContext) {
     });
 }
 var getHandlerParamType = function (pathNode, pathName, placeholderType) { return function (param) {
-    // see if there is a `RequestBody` type for this path
-    // pathNode.statements.filter(s => ts.isTypeReferenceNode(s) && s.typeName.getFullText() == '')
+    // find the route type that corresponds to the given `param`
+    // note that when we want the route's `SuccessResponses`, that's really a subset of `Responses`!
+    var paramName = param === 'SuccessResponses' ? 'Responses' : param;
     var paramNode = pathNode.statements.find(function (s) {
         if (typescript_1.default.isInterfaceDeclaration(s) ||
             typescript_1.default.isTypeAliasDeclaration(s) ||
             typescript_1.default.isModuleDeclaration(s)) {
-            return s.name.text === param;
+            return s.name.text === paramName;
         }
         return undefined;
     });
     if (paramNode) {
+        var prefix = "Paths." + pathName + "." + paramName;
         if (param === 'Responses') {
-            var responsesBody = paramNode.body;
-            if (responsesBody && typescript_1.default.isModuleBlock(responsesBody)) {
-                return typescript_1.default.createUnionTypeNode(responsesBody.statements
-                    .map(function (s) {
-                    return typescript_1.default.isTypeAliasDeclaration(s) ||
-                        typescript_1.default.isInterfaceDeclaration(s)
-                        ? "Paths." + pathName + "." + param + "." + s.name.text
-                        : '';
-                })
-                    .filter(function (n) { return !!n; })
-                    .map(function (n) { return typescript_1.default.createTypeReferenceNode(n, undefined); }));
-            }
-            return placeholderType;
+            // build a union type with all possible responses (both success and errors)
+            var types = getArrayOfNamedTypes(paramNode);
+            return types.length
+                ? createUnionTypeNode(prefix, types)
+                : placeholderType;
+        }
+        else if (param === 'SuccessResponses') {
+            // build a union type with all possible success responses (most likely there's only one)
+            var isSuccessResponse = function (declaration) {
+                return /^\$2\d\d$/.test(declaration.name.text);
+            };
+            var types = getArrayOfNamedTypes(paramNode).filter(isSuccessResponse);
+            return types.length
+                ? createUnionTypeNode(prefix, types)
+                : placeholderType;
         }
         else {
-            return typescript_1.default.createTypeReferenceNode("Paths." + pathName + "." + param, undefined);
+            return typescript_1.default.createTypeReferenceNode(prefix, undefined);
         }
     }
     else {
+        // the given param isn't defined for the route, simply revert to the placeholder type
         return placeholderType;
     }
 }; };
+/**
+ * Gets an array with all the type declarations contained in the given statement
+ */
+function getArrayOfNamedTypes(statement) {
+    if (typescript_1.default.isModuleDeclaration(statement)) {
+        var responsesBody = statement.body;
+        if (responsesBody && typescript_1.default.isModuleBlock(responsesBody)) {
+            return responsesBody.statements.filter(isNamedDeclaration);
+        }
+    }
+    return [];
+}
+/**
+ * Create a new TS union type from an array of types. For example, turn
+ *     [A, B, C]
+ * into
+ *     A | B | C
+ */
+function createUnionTypeNode(prefix, statements) {
+    return typescript_1.default.createUnionTypeNode(statements
+        .map(function (s) { return prefix + "." + s.name.text; })
+        .filter(function (n) { return !!n; })
+        .map(function (n) { return typescript_1.default.createTypeReferenceNode(n, undefined); }));
+}
 function createImportStatement() {
     var namedImport = typescript_1.default.createNamedImports([
         typescript_1.default.createImportSpecifier(undefined, typescript_1.default.createIdentifier('RequestHandler')),

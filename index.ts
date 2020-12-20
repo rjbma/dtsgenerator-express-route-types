@@ -17,6 +17,10 @@ const plugin: Plugin = {
     postProcess,
 };
 
+type NamedDeclaration = ts.TypeAliasDeclaration | ts.InterfaceDeclaration;
+const isNamedDeclaration = (d: ts.Statement): d is NamedDeclaration =>
+    ts.isTypeAliasDeclaration(d) || ts.isInterfaceDeclaration(d);
+
 interface Config {
     placeholderType: 'any' | 'unknown';
     routeTypeName: string;
@@ -149,6 +153,9 @@ async function postProcess(
 
                     const pathParamsType = paramGetter('PathParameters');
                     const responsesType = paramGetter('Responses');
+                    const successResponsesType = paramGetter(
+                        'SuccessResponses'
+                    );
                     const bodyType = paramGetter('RequestBody');
                     const queryParamsType = paramGetter('QueryParameters');
                     const headersParamsType = paramGetter('HeaderParameters');
@@ -179,6 +186,10 @@ async function postProcess(
                                     pathParamsType
                                 ),
                                 createInterfaceProp('responses', responsesType),
+                                createInterfaceProp(
+                                    'successResponses',
+                                    successResponsesType
+                                ),
                                 createInterfaceProp('requestBody', bodyType),
                                 createInterfaceProp(
                                     'queryParams',
@@ -222,47 +233,76 @@ const getHandlerParamType = (
         | 'RequestBody'
         | 'QueryParameters'
         | 'HeaderParameters'
+        | 'SuccessResponses'
 ) => {
-    // see if there is a `RequestBody` type for this path
-    // pathNode.statements.filter(s => ts.isTypeReferenceNode(s) && s.typeName.getFullText() == '')
+    // find the route type that corresponds to the given `param`
+    // note that when we want the route's `SuccessResponses`, that's really a subset of `Responses`!
+    const paramName = param === 'SuccessResponses' ? 'Responses' : param;
     const paramNode = pathNode.statements.find((s) => {
         if (
             ts.isInterfaceDeclaration(s) ||
             ts.isTypeAliasDeclaration(s) ||
             ts.isModuleDeclaration(s)
         ) {
-            return s.name.text === param;
+            return s.name.text === paramName;
         }
         return undefined;
     });
 
     if (paramNode) {
+        const prefix = `Paths.${pathName}.${paramName}`;
         if (param === 'Responses') {
-            const responsesBody = (paramNode as ts.ModuleDeclaration).body;
-            if (responsesBody && ts.isModuleBlock(responsesBody)) {
-                return ts.createUnionTypeNode(
-                    responsesBody.statements
-                        .map((s) =>
-                            ts.isTypeAliasDeclaration(s) ||
-                            ts.isInterfaceDeclaration(s)
-                                ? `Paths.${pathName}.${param}.${s.name.text}`
-                                : ''
-                        )
-                        .filter((n) => !!n)
-                        .map((n) => ts.createTypeReferenceNode(n, undefined))
-                );
-            }
-            return placeholderType;
-        } else {
-            return ts.createTypeReferenceNode(
-                `Paths.${pathName}.${param}`,
-                undefined
+            // build a union type with all possible responses (both success and errors)
+            const types = getArrayOfNamedTypes(paramNode);
+            return types.length
+                ? createUnionTypeNode(prefix, types)
+                : placeholderType;
+        } else if (param === 'SuccessResponses') {
+            // build a union type with all possible success responses (most likely there's only one)
+            const isSuccessResponse = (declaration: NamedDeclaration) =>
+                /^\$2\d\d$/.test(declaration.name.text);
+            const types = getArrayOfNamedTypes(paramNode).filter(
+                isSuccessResponse
             );
+            return types.length
+                ? createUnionTypeNode(prefix, types)
+                : placeholderType;
+        } else {
+            return ts.createTypeReferenceNode(prefix, undefined);
         }
     } else {
+        // the given param isn't defined for the route, simply revert to the placeholder type
         return placeholderType;
     }
 };
+
+/**
+ * Gets an array with all the type declarations contained in the given statement
+ */
+function getArrayOfNamedTypes(statement: ts.Statement): NamedDeclaration[] {
+    if (ts.isModuleDeclaration(statement)) {
+        const responsesBody = statement.body;
+        if (responsesBody && ts.isModuleBlock(responsesBody)) {
+            return responsesBody.statements.filter(isNamedDeclaration);
+        }
+    }
+    return [];
+}
+
+/**
+ * Create a new TS union type from an array of types. For example, turn
+ *     [A, B, C]
+ * into
+ *     A | B | C
+ */
+function createUnionTypeNode(prefix: string, statements: NamedDeclaration[]) {
+    return ts.createUnionTypeNode(
+        statements
+            .map((s) => `${prefix}.${s.name.text}`)
+            .filter((n) => !!n)
+            .map((n) => ts.createTypeReferenceNode(n, undefined))
+    );
+}
 
 function createImportStatement() {
     const namedImport = ts.createNamedImports([
