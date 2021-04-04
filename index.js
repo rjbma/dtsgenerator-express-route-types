@@ -234,7 +234,7 @@ function loadConfig(config, defaultConfig) {
     }
     else {
         return {
-            placeholderType: config['defaultConfig'] || defaultConfig.placeholderType,
+            placeholderType: config['placeholderType'] || defaultConfig.placeholderType,
             routeTypeName: config['routeTypeName'] || defaultConfig.routeTypeName,
         };
     }
