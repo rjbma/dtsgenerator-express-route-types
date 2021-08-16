@@ -21,7 +21,7 @@ var isNamedDeclaration = function (d) {
 };
 var defaultConfig = {
     placeholderType: 'unknown',
-    routeTypeName: 'Route',
+    routeTypeName: false,
 };
 function postProcess(pluginContext) {
     return tslib_1.__awaiter(this, void 0, void 0, function () {
@@ -35,12 +35,14 @@ function postProcess(pluginContext) {
                         }
                         var config = rawConfig;
                         var allMetadata = getOperationMetadata(pluginContext);
-                        // add ` import { RequestHanlder } from 'express' `
-                        Object.assign(root, {
-                            statements: factory.createNodeArray(tslib_1.__spreadArray([
-                                createImportStatement(factory)
-                            ], tslib_1.__read(root.statements))),
-                        });
+                        if (config.routeTypeName) {
+                            // add ` import { RequestHanlder } from 'express' `
+                            Object.assign(root, {
+                                statements: factory.createNodeArray(tslib_1.__spreadArray([
+                                    createImportStatement(factory)
+                                ], tslib_1.__read(root.statements))),
+                            });
+                        }
                         return typescript_1.default.visitNode(root, rootVisit);
                         /**
                          * Main purpose of this visitor e just to find the `Paths` **ModuleDeclaration**
@@ -131,25 +133,28 @@ function postProcess(pluginContext) {
                                             createMetadataProp(metadata, 'openapiPath'),
                                         ]
                                         : [];
-                                    Object.assign(node.body, {
-                                        statements: factory.createNodeArray(tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(node.body.statements)), [
-                                            // add an interface that completely describes the path (method, params including headers, etc.)
-                                            factory.createInterfaceDeclaration(undefined, undefined, 'Config', undefined, undefined, tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(metadataProps)), [
-                                                createInterfaceProp('pathParams', pathParamsType),
-                                                createInterfaceProp('responses', responsesType),
-                                                createInterfaceProp('successResponses', successResponsesType),
-                                                createInterfaceProp('requestBody', bodyType),
-                                                createInterfaceProp('queryParams', queryParamsType),
-                                                createInterfaceProp('headers', headersParamsType),
-                                            ])),
-                                            // add a type that can be used in an Express route
-                                            factory.createTypeAliasDeclaration(undefined, undefined, config.routeTypeName, undefined, factory.createTypeReferenceNode('RequestHandler', [
-                                                pathParamsType,
-                                                responsesType,
-                                                bodyType,
-                                                queryParamsType,
-                                            ])),
+                                    var statements = tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(node.body.statements)), [
+                                        // add an interface that completely describes the path (method, params including headers, etc.)
+                                        factory.createInterfaceDeclaration(undefined, undefined, 'Config', undefined, undefined, tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(metadataProps)), [
+                                            createInterfaceProp('pathParams', pathParamsType),
+                                            createInterfaceProp('responses', responsesType),
+                                            createInterfaceProp('successResponses', successResponsesType),
+                                            createInterfaceProp('requestBody', bodyType),
+                                            createInterfaceProp('queryParams', queryParamsType),
+                                            createInterfaceProp('headers', headersParamsType),
                                         ])),
+                                    ]);
+                                    if (config.routeTypeName) {
+                                        // add a type that can be used in an Express route
+                                        statements.push(factory.createTypeAliasDeclaration(undefined, undefined, config.routeTypeName, undefined, factory.createTypeReferenceNode('RequestHandler', [
+                                            pathParamsType,
+                                            responsesType,
+                                            bodyType,
+                                            queryParamsType,
+                                        ])));
+                                    }
+                                    Object.assign(node.body, {
+                                        statements: factory.createNodeArray(statements),
                                     });
                                 }
                             }

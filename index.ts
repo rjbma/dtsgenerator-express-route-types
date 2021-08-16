@@ -23,12 +23,12 @@ const isNamedDeclaration = (d: ts.Statement): d is NamedDeclaration =>
 
 interface Config {
     placeholderType: 'any' | 'unknown';
-    routeTypeName: string;
+    routeTypeName: string | false;
 }
 
 const defaultConfig: Config = {
     placeholderType: 'unknown',
-    routeTypeName: 'Route',
+    routeTypeName: false,
 };
 
 async function postProcess(
@@ -44,13 +44,15 @@ async function postProcess(
             const config = rawConfig as Config;
             const allMetadata = getOperationMetadata(pluginContext);
 
-            // add ` import { RequestHanlder } from 'express' `
-            Object.assign<typeof root, Partial<typeof root>>(root, {
-                statements: factory.createNodeArray([
-                    createImportStatement(factory),
-                    ...root.statements,
-                ]),
-            });
+            if (config.routeTypeName) {
+                // add ` import { RequestHanlder } from 'express' `
+                Object.assign<typeof root, Partial<typeof root>>(root, {
+                    statements: factory.createNodeArray([
+                        createImportStatement(factory),
+                        ...root.statements,
+                    ]),
+                });
+            }
 
             return ts.visitNode(root, rootVisit);
 
@@ -178,49 +180,48 @@ async function postProcess(
                               ]
                             : [];
 
-                        Object.assign<
-                            typeof node['body'],
-                            Partial<typeof node['body']>
-                        >(node.body, {
-                            statements: factory.createNodeArray([
-                                // keep all statements already under the path's namespace
-                                ...node.body.statements,
-                                // add an interface that completely describes the path (method, params including headers, etc.)
-                                factory.createInterfaceDeclaration(
-                                    undefined,
-                                    undefined,
-                                    'Config',
-                                    undefined,
-                                    undefined,
-                                    [
-                                        ...metadataProps,
-                                        createInterfaceProp(
-                                            'pathParams',
-                                            pathParamsType
-                                        ),
-                                        createInterfaceProp(
-                                            'responses',
-                                            responsesType
-                                        ),
-                                        createInterfaceProp(
-                                            'successResponses',
-                                            successResponsesType
-                                        ),
-                                        createInterfaceProp(
-                                            'requestBody',
-                                            bodyType
-                                        ),
-                                        createInterfaceProp(
-                                            'queryParams',
-                                            queryParamsType
-                                        ),
-                                        createInterfaceProp(
-                                            'headers',
-                                            headersParamsType
-                                        ),
-                                    ]
-                                ),
-                                // add a type that can be used in an Express route
+                        const statements = [
+                            // keep all statements already under the path's namespace
+                            ...node.body.statements,
+                            // add an interface that completely describes the path (method, params including headers, etc.)
+                            factory.createInterfaceDeclaration(
+                                undefined,
+                                undefined,
+                                'Config',
+                                undefined,
+                                undefined,
+                                [
+                                    ...metadataProps,
+                                    createInterfaceProp(
+                                        'pathParams',
+                                        pathParamsType
+                                    ),
+                                    createInterfaceProp(
+                                        'responses',
+                                        responsesType
+                                    ),
+                                    createInterfaceProp(
+                                        'successResponses',
+                                        successResponsesType
+                                    ),
+                                    createInterfaceProp(
+                                        'requestBody',
+                                        bodyType
+                                    ),
+                                    createInterfaceProp(
+                                        'queryParams',
+                                        queryParamsType
+                                    ),
+                                    createInterfaceProp(
+                                        'headers',
+                                        headersParamsType
+                                    ),
+                                ]
+                            ),
+                        ];
+                        if (config.routeTypeName) {
+                            // add a type that can be used in an Express route
+                            statements.push(
                                 factory.createTypeAliasDeclaration(
                                     undefined,
                                     undefined,
@@ -235,8 +236,11 @@ async function postProcess(
                                             queryParamsType,
                                         ]
                                     )
-                                ),
-                            ]),
+                                )
+                            );
+                        }
+                        Object.assign(node.body, {
+                            statements: factory.createNodeArray(statements),
                         });
                     }
                 }
