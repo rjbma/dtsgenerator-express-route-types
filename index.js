@@ -14,6 +14,7 @@ var plugin = {
         version: packageJson.version,
         description: packageJson.description,
     },
+    preProcess: preProcess,
     postProcess: postProcess,
 };
 var isNamedDeclaration = function (d) {
@@ -23,6 +24,30 @@ var defaultConfig = {
     placeholderType: 'unknown',
     routeTypeName: false,
 };
+/**
+ * Simple pre-processor to make sure that every endpoint has an `operationId`.
+ * This is important because the `operationId` is used by the main plugin processor.
+ * @param _pluginContext
+ */
+function preProcess(_pluginContext) {
+    return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return tslib_1.__generator(this, function (_a) {
+            return [2 /*return*/, function (contents) {
+                    return contents.map(function (schema) {
+                        var c = schema.content;
+                        Object.keys(c.paths).forEach(function (path) {
+                            Object.keys(c.paths[path]).forEach(function (method) {
+                                if (!c.paths[path][method].operationId) {
+                                    c.paths[path][method].operationId = method + "$" + path;
+                                }
+                            });
+                        });
+                        return schema;
+                    });
+                }];
+        });
+    });
+}
 function postProcess(pluginContext) {
     return tslib_1.__awaiter(this, void 0, void 0, function () {
         return tslib_1.__generator(this, function (_a) {

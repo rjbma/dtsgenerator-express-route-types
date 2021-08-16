@@ -1,4 +1,4 @@
-import { Plugin, PluginContext } from 'dtsgenerator';
+import { Plugin, PluginContext, PreProcessHandler, Schema } from 'dtsgenerator';
 import ts from 'typescript';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -14,6 +14,7 @@ const plugin: Plugin = {
         version: packageJson.version,
         description: packageJson.description,
     },
+    preProcess,
     postProcess,
 };
 
@@ -30,6 +31,33 @@ const defaultConfig: Config = {
     placeholderType: 'unknown',
     routeTypeName: false,
 };
+
+interface OpenApiSchema {
+    paths: Record<string, Record<string, { operationId?: string }>>;
+}
+
+/**
+ * Simple pre-processor to make sure that every endpoint has an `operationId`.
+ * This is important because the `operationId` is used by the main plugin processor.
+ * @param _pluginContext
+ */
+async function preProcess(
+    _pluginContext: PluginContext
+): Promise<PreProcessHandler | undefined> {
+    return (contents: Schema[]): Schema[] => {
+        return contents.map((schema) => {
+            const c = schema.content as OpenApiSchema;
+            Object.keys(c.paths).forEach((path) => {
+                Object.keys(c.paths[path]).forEach((method) => {
+                    if (!c.paths[path][method].operationId) {
+                        c.paths[path][method].operationId = `${method}$${path}`;
+                    }
+                });
+            });
+            return schema;
+        });
+    };
+}
 
 async function postProcess(
     pluginContext: PluginContext
