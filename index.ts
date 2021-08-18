@@ -49,8 +49,14 @@ async function preProcess(
             const c = schema.content as OpenApiSchema;
             Object.keys(c.paths).forEach((path) => {
                 Object.keys(c.paths[path]).forEach((method) => {
-                    if (!c.paths[path][method].operationId) {
-                        c.paths[path][method].operationId = `${method}$${path}`;
+                    let operationId = c.paths[path][method].operationId;
+                    if (!operationId) {
+                        // if operationId isn't specified in the spec
+                        // calculate one from the endpoint's method and path
+                        operationId = `${method}${capitalize(
+                            path.replace(/\W+/g, '')
+                        )}`;
+                        c.paths[path][method].operationId = operationId;
                     }
                 });
             });
@@ -198,78 +204,92 @@ async function postProcess(
                         const queryParamsType = paramGetter('QueryParameters');
                         const headersParamsType =
                             paramGetter('HeaderParameters');
-                        const metadata = allMetadata[node.name.text];
-                        const metadataProps = metadata
-                            ? [
-                                  createMetadataProp(metadata, 'operationId'),
-                                  createMetadataProp(metadata, 'method'),
-                                  createMetadataProp(metadata, 'expressPath'),
-                                  createMetadataProp(metadata, 'openapiPath'),
-                              ]
-                            : [];
 
-                        const statements = [
-                            // keep all statements already under the path's namespace
-                            ...node.body.statements,
-                            // add an interface that completely describes the path (method, params including headers, etc.)
-                            factory.createInterfaceDeclaration(
-                                undefined,
-                                undefined,
-                                'Config',
-                                undefined,
-                                undefined,
-                                [
-                                    ...metadataProps,
-                                    createInterfaceProp(
-                                        'pathParams',
-                                        pathParamsType
-                                    ),
-                                    createInterfaceProp(
-                                        'responses',
-                                        responsesType
-                                    ),
-                                    createInterfaceProp(
-                                        'successResponses',
-                                        successResponsesType
-                                    ),
-                                    createInterfaceProp(
-                                        'requestBody',
-                                        bodyType
-                                    ),
-                                    createInterfaceProp(
-                                        'queryParams',
-                                        queryParamsType
-                                    ),
-                                    createInterfaceProp(
-                                        'headers',
-                                        headersParamsType
-                                    ),
-                                ]
-                            ),
-                        ];
-                        if (config.routeTypeName) {
-                            // add a type that can be used in an Express route
-                            statements.push(
-                                factory.createTypeAliasDeclaration(
+                        // get the metadata (operationId, path, etc.) for the endpoint
+                        const metadata =
+                            allMetadata[node.name.text.toLowerCase()];
+                        if (metadata) {
+                            const metadataProps = metadata
+                                ? [
+                                      createMetadataProp(
+                                          metadata,
+                                          'operationId'
+                                      ),
+                                      createMetadataProp(metadata, 'method'),
+                                      createMetadataProp(
+                                          metadata,
+                                          'expressPath'
+                                      ),
+                                      createMetadataProp(
+                                          metadata,
+                                          'openapiPath'
+                                      ),
+                                  ]
+                                : [];
+
+                            const statements = [
+                                // keep all statements already under the path's namespace
+                                ...node.body.statements,
+                                // add an interface that completely describes the path (method, params including headers, etc.)
+                                factory.createInterfaceDeclaration(
                                     undefined,
                                     undefined,
-                                    config.routeTypeName,
+                                    'Config',
                                     undefined,
-                                    factory.createTypeReferenceNode(
-                                        'RequestHandler',
-                                        [
-                                            pathParamsType,
-                                            responsesType,
-                                            bodyType,
-                                            queryParamsType,
-                                        ]
+                                    undefined,
+                                    [
+                                        ...metadataProps,
+                                        createInterfaceProp(
+                                            'pathParams',
+                                            pathParamsType
+                                        ),
+                                        createInterfaceProp(
+                                            'responses',
+                                            responsesType
+                                        ),
+                                        createInterfaceProp(
+                                            'successResponses',
+                                            successResponsesType
+                                        ),
+                                        createInterfaceProp(
+                                            'requestBody',
+                                            bodyType
+                                        ),
+                                        createInterfaceProp(
+                                            'queryParams',
+                                            queryParamsType
+                                        ),
+                                        createInterfaceProp(
+                                            'headers',
+                                            headersParamsType
+                                        ),
+                                    ]
+                                ),
+                            ];
+                            if (config.routeTypeName) {
+                                // add a type that can be used in an Express route
+                                statements.push(
+                                    factory.createTypeAliasDeclaration(
+                                        undefined,
+                                        undefined,
+                                        config.routeTypeName,
+                                        undefined,
+                                        factory.createTypeReferenceNode(
+                                            'RequestHandler',
+                                            [
+                                                pathParamsType,
+                                                responsesType,
+                                                bodyType,
+                                                queryParamsType,
+                                            ]
+                                        )
                                     )
-                                )
-                            );
+                                );
+                            }
+                            Object.assign(node.body, {
+                                statements: factory.createNodeArray(statements),
+                            });
                         }
-                        Object.assign(node.body, {
-                            statements: factory.createNodeArray(statements),
-                        });
                     }
                 }
                 return node;
@@ -429,13 +449,20 @@ function getOperationMetadata(pluginContext: PluginContext) {
         Object.keys(paths).forEach((path) =>
             Object.keys(paths[path]).forEach((method) => {
                 const pathParamRegex = /{([^}]+)}/g;
-                const operationId = paths[path][method].operationId;
-                result[capitalize(operationId)] = {
-                    operationId,
-                    openapiPath: path,
-                    expressPath: path.replace(pathParamRegex, ':$1'),
-                    method,
-                };
+                const operationId: string = paths[path][method].operationId;
+                if (operationId) {
+                    const key = operationId.toLowerCase();
+                    result[key] = {
+                        operationId,
+                        openapiPath: path,
+                        expressPath: path.replace(pathParamRegex, ':$1'),
+                        method,
+                    };
+                } else {
+                    console.log(
+                        `Couldn't extract operationId for ${method} ${path}`
+                    );
+                }
             })
         );
     }

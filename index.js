@@ -37,8 +37,12 @@ function preProcess(_pluginContext) {
                         var c = schema.content;
                         Object.keys(c.paths).forEach(function (path) {
                             Object.keys(c.paths[path]).forEach(function (method) {
-                                if (!c.paths[path][method].operationId) {
-                                    c.paths[path][method].operationId = method + "$" + path;
+                                var operationId = c.paths[path][method].operationId;
+                                if (!operationId) {
+                                    // if operationId isn't specified in the spec
+                                    // calculate one from the endpoint's method and path
+                                    operationId = "" + method + capitalize(path.replace(/\W+/g, ''));
+                                    c.paths[path][method].operationId = operationId;
                                 }
                             });
                         });
@@ -149,38 +153,41 @@ function postProcess(pluginContext) {
                                     var bodyType = paramGetter('RequestBody');
                                     var queryParamsType = paramGetter('QueryParameters');
                                     var headersParamsType = paramGetter('HeaderParameters');
-                                    var metadata = allMetadata[node.name.text];
-                                    var metadataProps = metadata
-                                        ? [
-                                            createMetadataProp(metadata, 'operationId'),
-                                            createMetadataProp(metadata, 'method'),
-                                            createMetadataProp(metadata, 'expressPath'),
-                                            createMetadataProp(metadata, 'openapiPath'),
-                                        ]
-                                        : [];
-                                    var statements = tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(node.body.statements)), [
-                                        // add an interface that completely describes the path (method, params including headers, etc.)
-                                        factory.createInterfaceDeclaration(undefined, undefined, 'Config', undefined, undefined, tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(metadataProps)), [
-                                            createInterfaceProp('pathParams', pathParamsType),
-                                            createInterfaceProp('responses', responsesType),
-                                            createInterfaceProp('successResponses', successResponsesType),
-                                            createInterfaceProp('requestBody', bodyType),
-                                            createInterfaceProp('queryParams', queryParamsType),
-                                            createInterfaceProp('headers', headersParamsType),
-                                        ])),
-                                    ]);
-                                    if (config.routeTypeName) {
-                                        // add a type that can be used in an Express route
-                                        statements.push(factory.createTypeAliasDeclaration(undefined, undefined, config.routeTypeName, undefined, factory.createTypeReferenceNode('RequestHandler', [
-                                            pathParamsType,
-                                            responsesType,
-                                            bodyType,
-                                            queryParamsType,
-                                        ])));
+                                    // get the metadata (operationId, path, etc.) for the endpoint
+                                    var metadata = allMetadata[node.name.text.toLowerCase()];
+                                    if (metadata) {
+                                        var metadataProps = metadata
+                                            ? [
+                                                createMetadataProp(metadata, 'operationId'),
+                                                createMetadataProp(metadata, 'method'),
+                                                createMetadataProp(metadata, 'expressPath'),
+                                                createMetadataProp(metadata, 'openapiPath'),
+                                            ]
+                                            : [];
+                                        var statements = tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(node.body.statements)), [
+                                            // add an interface that completely describes the path (method, params including headers, etc.)
+                                            factory.createInterfaceDeclaration(undefined, undefined, 'Config', undefined, undefined, tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(metadataProps)), [
+                                                createInterfaceProp('pathParams', pathParamsType),
+                                                createInterfaceProp('responses', responsesType),
+                                                createInterfaceProp('successResponses', successResponsesType),
+                                                createInterfaceProp('requestBody', bodyType),
+                                                createInterfaceProp('queryParams', queryParamsType),
+                                                createInterfaceProp('headers', headersParamsType),
+                                            ])),
+                                        ]);
+                                        if (config.routeTypeName) {
+                                            // add a type that can be used in an Express route
+                                            statements.push(factory.createTypeAliasDeclaration(undefined, undefined, config.routeTypeName, undefined, factory.createTypeReferenceNode('RequestHandler', [
+                                                pathParamsType,
+                                                responsesType,
+                                                bodyType,
+                                                queryParamsType,
+                                            ])));
+                                        }
+                                        Object.assign(node.body, {
+                                            statements: factory.createNodeArray(statements),
+                                        });
                                     }
-                                    Object.assign(node.body, {
-                                        statements: factory.createNodeArray(statements),
-                                    });
                                 }
                             }
                             return node;
@@ -298,12 +305,18 @@ function getOperationMetadata(pluginContext) {
             return Object.keys(paths_1[path]).forEach(function (method) {
                 var pathParamRegex = /{([^}]+)}/g;
                 var operationId = paths_1[path][method].operationId;
-                result[capitalize(operationId)] = {
-                    operationId: operationId,
-                    openapiPath: path,
-                    expressPath: path.replace(pathParamRegex, ':$1'),
-                    method: method,
-                };
+                if (operationId) {
+                    var key = operationId.toLowerCase();
+                    result[key] = {
+                        operationId: operationId,
+                        openapiPath: path,
+                        expressPath: path.replace(pathParamRegex, ':$1'),
+                        method: method,
+                    };
+                }
+                else {
+                    console.log("Couldn't extract operationId for " + method + " " + path);
+                }
             });
         });
     }
