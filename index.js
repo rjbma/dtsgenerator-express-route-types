@@ -78,12 +78,7 @@ function postProcess(pluginContext) {
                          */
                         function rootVisit(node) {
                             if (typescript_1.default.isModuleDeclaration(node)) {
-                                if (node.name.text === 'Paths') {
-                                    return typescript_1.default.visitEachChild(node, visitPathsBlock, context);
-                                }
-                                else {
-                                    return node;
-                                }
+                                return typescript_1.default.visitEachChild(node, visitPathsBlock, context);
                             }
                             else {
                                 return typescript_1.default.visitEachChild(node, rootVisit, context);
@@ -156,14 +151,12 @@ function postProcess(pluginContext) {
                                     // get the metadata (operationId, path, etc.) for the endpoint
                                     var metadata = allMetadata[node.name.text.toLowerCase()];
                                     if (metadata) {
-                                        var metadataProps = metadata
-                                            ? [
-                                                createMetadataProp(metadata, 'operationId'),
-                                                createMetadataProp(metadata, 'method'),
-                                                createMetadataProp(metadata, 'expressPath'),
-                                                createMetadataProp(metadata, 'openapiPath'),
-                                            ]
-                                            : [];
+                                        var metadataProps = [
+                                            createMetadataProp(metadata, 'operationId'),
+                                            createMetadataProp(metadata, 'method'),
+                                            createMetadataProp(metadata, 'expressPath'),
+                                            createMetadataProp(metadata, 'openapiPath'),
+                                        ];
                                         var statements = tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(node.body.statements)), [
                                             // add an interface that completely describes the path (method, params including headers, etc.)
                                             factory.createInterfaceDeclaration(undefined, undefined, 'Config', undefined, undefined, tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(metadataProps)), [
@@ -211,7 +204,7 @@ var getHandlerParamType = function (pathNode, pathName, placeholderType, factory
             return undefined;
         });
         if (paramNode) {
-            var prefix = "Paths." + pathName + "." + paramName;
+            var prefix = pathName + "." + paramName;
             if (param === 'Responses') {
                 // build a union type with all possible responses (both success and errors)
                 var types = getArrayOfNamedTypes(paramNode);
@@ -290,7 +283,7 @@ function loadConfig(config, defaultConfig) {
  */
 function getOperationMetadata(pluginContext) {
     var _a, _b;
-    // the implementation of this this whole function is really ugly
+    // the implementation of this whole function is really ugly
     // there surely is some better way to implement the whole thing!
     var result = {};
     if (pluginContext.inputSchemas) {

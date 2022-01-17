@@ -95,15 +95,7 @@ async function postProcess(
              */
             function rootVisit(node: ts.Node): ts.Node {
                 if (ts.isModuleDeclaration(node)) {
-                    if (node.name.text === 'Paths') {
-                        return ts.visitEachChild(
-                            node,
-                            visitPathsBlock,
-                            context
-                        );
-                    } else {
-                        return node;
-                    }
+                    return ts.visitEachChild(node, visitPathsBlock, context);
                 } else {
                     return ts.visitEachChild(node, rootVisit, context);
                 }
@@ -209,23 +201,12 @@ async function postProcess(
                         const metadata =
                             allMetadata[node.name.text.toLowerCase()];
                         if (metadata) {
-                            const metadataProps = metadata
-                                ? [
-                                      createMetadataProp(
-                                          metadata,
-                                          'operationId'
-                                      ),
-                                      createMetadataProp(metadata, 'method'),
-                                      createMetadataProp(
-                                          metadata,
-                                          'expressPath'
-                                      ),
-                                      createMetadataProp(
-                                          metadata,
-                                          'openapiPath'
-                                      ),
-                                  ]
-                                : [];
+                            const metadataProps = [
+                                createMetadataProp(metadata, 'operationId'),
+                                createMetadataProp(metadata, 'method'),
+                                createMetadataProp(metadata, 'expressPath'),
+                                createMetadataProp(metadata, 'openapiPath'),
+                            ];
 
                             const statements = [
                                 // keep all statements already under the path's namespace
@@ -328,7 +309,7 @@ const getHandlerParamType =
         });
 
         if (paramNode) {
-            const prefix = `Paths.${pathName}.${paramName}`;
+            const prefix = `${pathName}.${paramName}`;
             if (param === 'Responses') {
                 // build a union type with all possible responses (both success and errors)
                 const types = getArrayOfNamedTypes(paramNode);
@@ -434,7 +415,7 @@ interface OperationMetadata {
  * Get the path and method for each operation in the OpenAPI spec.
  */
 function getOperationMetadata(pluginContext: PluginContext) {
-    // the implementation of this this whole function is really ugly
+    // the implementation of this whole function is really ugly
     // there surely is some better way to implement the whole thing!
     const result: Record<string, OperationMetadata> = {};
     if (pluginContext.inputSchemas) {
