@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = require("tslib");
-var typescript_1 = tslib_1.__importDefault(require("typescript"));
+var typescript_1 = (0, tslib_1.__importDefault)(require("typescript"));
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 var packageJson = require('./package.json');
 /**
@@ -30,8 +30,8 @@ var defaultConfig = {
  * @param _pluginContext
  */
 function preProcess(_pluginContext) {
-    return tslib_1.__awaiter(this, void 0, void 0, function () {
-        return tslib_1.__generator(this, function (_a) {
+    return (0, tslib_1.__awaiter)(this, void 0, void 0, function () {
+        return (0, tslib_1.__generator)(this, function (_a) {
             return [2 /*return*/, function (contents) {
                     return contents.map(function (schema) {
                         var c = schema.content;
@@ -41,7 +41,7 @@ function preProcess(_pluginContext) {
                                 if (!operationId) {
                                     // if operationId isn't specified in the spec
                                     // calculate one from the endpoint's method and path
-                                    operationId = "" + method + capitalize(path.replace(/\W+/g, ''));
+                                    operationId = "".concat(method).concat(capitalize(path.replace(/\W+/g, '')));
                                     c.paths[path][method].operationId = operationId;
                                 }
                             });
@@ -53,8 +53,8 @@ function preProcess(_pluginContext) {
     });
 }
 function postProcess(pluginContext) {
-    return tslib_1.__awaiter(this, void 0, void 0, function () {
-        return tslib_1.__generator(this, function (_a) {
+    return (0, tslib_1.__awaiter)(this, void 0, void 0, function () {
+        return (0, tslib_1.__generator)(this, function (_a) {
             return [2 /*return*/, function (context) {
                     return function (root) {
                         var factory = context.factory;
@@ -67,9 +67,9 @@ function postProcess(pluginContext) {
                         if (config.routeTypeName) {
                             // add ` import { RequestHanlder } from 'express' `
                             Object.assign(root, {
-                                statements: factory.createNodeArray(tslib_1.__spreadArray([
+                                statements: factory.createNodeArray((0, tslib_1.__spreadArray)([
                                     createImportStatement(factory)
-                                ], tslib_1.__read(root.statements))),
+                                ], (0, tslib_1.__read)(root.statements), false)),
                             });
                         }
                         return typescript_1.default.visitNode(root, rootVisit);
@@ -157,17 +157,17 @@ function postProcess(pluginContext) {
                                             createMetadataProp(metadata, 'expressPath'),
                                             createMetadataProp(metadata, 'openapiPath'),
                                         ];
-                                        var statements = tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(node.body.statements)), [
+                                        var statements = (0, tslib_1.__spreadArray)((0, tslib_1.__spreadArray)([], (0, tslib_1.__read)(node.body.statements), false), [
                                             // add an interface that completely describes the path (method, params including headers, etc.)
-                                            factory.createInterfaceDeclaration(undefined, undefined, 'Config', undefined, undefined, tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(metadataProps)), [
+                                            factory.createInterfaceDeclaration(undefined, undefined, 'Config', undefined, undefined, (0, tslib_1.__spreadArray)((0, tslib_1.__spreadArray)([], (0, tslib_1.__read)(metadataProps), false), [
                                                 createInterfaceProp('pathParams', pathParamsType),
                                                 createInterfaceProp('responses', responsesType),
                                                 createInterfaceProp('successResponses', successResponsesType),
                                                 createInterfaceProp('requestBody', bodyType),
                                                 createInterfaceProp('queryParams', queryParamsType),
                                                 createInterfaceProp('headers', headersParamsType),
-                                            ])),
-                                        ]);
+                                            ], false)),
+                                        ], false);
                                         if (config.routeTypeName) {
                                             // add a type that can be used in an Express route
                                             statements.push(factory.createTypeAliasDeclaration(undefined, undefined, config.routeTypeName, undefined, factory.createTypeReferenceNode('RequestHandler', [
@@ -204,7 +204,7 @@ var getHandlerParamType = function (pathNode, pathName, placeholderType, factory
             return undefined;
         });
         if (paramNode) {
-            var prefix = pathName + "." + paramName;
+            var prefix = "".concat(pathName, ".").concat(paramName);
             if (param === 'Responses') {
                 // build a union type with all possible responses (both success and errors)
                 var types = getArrayOfNamedTypes(paramNode);
@@ -252,13 +252,13 @@ function getArrayOfNamedTypes(statement) {
  */
 function createUnionTypeNode(prefix, statements, factory) {
     return factory.createUnionTypeNode(statements
-        .map(function (s) { return prefix + "." + s.name.text; })
+        .map(function (s) { return "".concat(prefix, ".").concat(s.name.text); })
         .filter(function (n) { return !!n; })
         .map(function (n) { return factory.createTypeReferenceNode(n, undefined); }));
 }
 function createImportStatement(factory) {
     var namedImport = factory.createNamedImports([
-        factory.createImportSpecifier(undefined, factory.createIdentifier('RequestHandler')),
+        factory.createImportSpecifier(false, undefined, factory.createIdentifier('RequestHandler')),
     ]);
     var importExpress = factory.createImportDeclaration(undefined, undefined, factory.createImportClause(false, undefined, namedImport), factory.createStringLiteral('express'));
     return importExpress;
@@ -308,7 +308,7 @@ function getOperationMetadata(pluginContext) {
                     };
                 }
                 else {
-                    console.log("Couldn't extract operationId for " + method + " " + path);
+                    console.log("Couldn't extract operationId for ".concat(method, " ").concat(path));
                 }
             });
         });

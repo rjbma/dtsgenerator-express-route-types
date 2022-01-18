@@ -369,6 +369,7 @@ function createUnionTypeNode(
 function createImportStatement(factory: ts.NodeFactory) {
     const namedImport = factory.createNamedImports([
         factory.createImportSpecifier(
+            false,
             undefined,
             factory.createIdentifier('RequestHandler')
         ),
