@@ -41,7 +41,7 @@ function preProcess(_pluginContext) {
                                 if (!operationId) {
                                     // if operationId isn't specified in the spec
                                     // calculate one from the endpoint's method and path
-                                    operationId = "".concat(method).concat(capitalize(path.replace(/\W+/g, '')));
+                                    operationId = "".concat(method).concat(capitalize(path.replace(/[^a-zA-Z0-9]+/g, '')));
                                     c.paths[path][method].operationId = operationId;
                                 }
                             });
