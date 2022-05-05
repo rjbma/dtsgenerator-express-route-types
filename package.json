@@ -14,7 +14,7 @@
     "compile": "tsc -p .",
     "watch": "npm run compile -- -w",
     "build": "npm run compile",
-    "prepublish": "npm run build",
+    "prepublishOnly": "npm run build",
     "do-test": "cross-env TS_NODE_FILES=true mocha --exit --require ts-node/register --colors test/*_test.ts",
     "test": "nyc npm run do-test",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
