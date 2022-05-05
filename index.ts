@@ -54,7 +54,7 @@ async function preProcess(
                         // if operationId isn't specified in the spec
                         // calculate one from the endpoint's method and path
                         operationId = `${method}${capitalize(
-                            path.replace(/\W+/g, '')
+                            path.replace(/[^a-zA-Z0-9]+/g, '')
                         )}`;
                         c.paths[path][method].operationId = operationId;
                     }
