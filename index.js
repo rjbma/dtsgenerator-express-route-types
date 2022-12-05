@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = require("tslib");
-var typescript_1 = (0, tslib_1.__importDefault)(require("typescript"));
+var typescript_1 = tslib_1.__importDefault(require("typescript"));
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 var packageJson = require('./package.json');
 /**
@@ -30,8 +30,8 @@ var defaultConfig = {
  * @param _pluginContext
  */
 function preProcess(_pluginContext) {
-    return (0, tslib_1.__awaiter)(this, void 0, void 0, function () {
-        return (0, tslib_1.__generator)(this, function (_a) {
+    return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return tslib_1.__generator(this, function (_a) {
             return [2 /*return*/, function (contents) {
                     return contents.map(function (schema) {
                         var c = schema.content;
@@ -53,8 +53,8 @@ function preProcess(_pluginContext) {
     });
 }
 function postProcess(pluginContext) {
-    return (0, tslib_1.__awaiter)(this, void 0, void 0, function () {
-        return (0, tslib_1.__generator)(this, function (_a) {
+    return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return tslib_1.__generator(this, function (_a) {
             return [2 /*return*/, function (context) {
                     return function (root) {
                         var factory = context.factory;
@@ -67,9 +67,9 @@ function postProcess(pluginContext) {
                         if (config.routeTypeName) {
                             // add ` import { RequestHanlder } from 'express' `
                             Object.assign(root, {
-                                statements: factory.createNodeArray((0, tslib_1.__spreadArray)([
+                                statements: factory.createNodeArray(tslib_1.__spreadArray([
                                     createImportStatement(factory)
-                                ], (0, tslib_1.__read)(root.statements), false)),
+                                ], tslib_1.__read(root.statements), false)),
                             });
                         }
                         return typescript_1.default.visitNode(root, rootVisit);
@@ -157,9 +157,9 @@ function postProcess(pluginContext) {
                                             createMetadataProp(metadata, 'expressPath'),
                                             createMetadataProp(metadata, 'openapiPath'),
                                         ];
-                                        var statements = (0, tslib_1.__spreadArray)((0, tslib_1.__spreadArray)([], (0, tslib_1.__read)(node.body.statements), false), [
+                                        var statements = tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(node.body.statements), false), [
                                             // add an interface that completely describes the path (method, params including headers, etc.)
-                                            factory.createInterfaceDeclaration(undefined, undefined, 'Config', undefined, undefined, (0, tslib_1.__spreadArray)((0, tslib_1.__spreadArray)([], (0, tslib_1.__read)(metadataProps), false), [
+                                            factory.createInterfaceDeclaration(undefined, 'Config', undefined, undefined, tslib_1.__spreadArray(tslib_1.__spreadArray([], tslib_1.__read(metadataProps), false), [
                                                 createInterfaceProp('pathParams', pathParamsType),
                                                 createInterfaceProp('responses', responsesType),
                                                 createInterfaceProp('successResponses', successResponsesType),
@@ -170,7 +170,7 @@ function postProcess(pluginContext) {
                                         ], false);
                                         if (config.routeTypeName) {
                                             // add a type that can be used in an Express route
-                                            statements.push(factory.createTypeAliasDeclaration(undefined, undefined, config.routeTypeName, undefined, factory.createTypeReferenceNode('RequestHandler', [
+                                            statements.push(factory.createTypeAliasDeclaration(undefined, config.routeTypeName, undefined, factory.createTypeReferenceNode('RequestHandler', [
                                                 pathParamsType,
                                                 responsesType,
                                                 bodyType,
@@ -260,7 +260,7 @@ function createImportStatement(factory) {
     var namedImport = factory.createNamedImports([
         factory.createImportSpecifier(false, undefined, factory.createIdentifier('RequestHandler')),
     ]);
-    var importExpress = factory.createImportDeclaration(undefined, undefined, factory.createImportClause(false, undefined, namedImport), factory.createStringLiteral('express'));
+    var importExpress = factory.createImportDeclaration(undefined, factory.createImportClause(false, undefined, namedImport), factory.createStringLiteral('express'));
     return importExpress;
 }
 function loadConfig(config, defaultConfig) {

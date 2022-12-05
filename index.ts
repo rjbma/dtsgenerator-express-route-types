@@ -214,7 +214,6 @@ async function postProcess(
                                 // add an interface that completely describes the path (method, params including headers, etc.)
                                 factory.createInterfaceDeclaration(
                                     undefined,
-                                    undefined,
                                     'Config',
                                     undefined,
                                     undefined,
@@ -251,7 +250,6 @@ async function postProcess(
                                 // add a type that can be used in an Express route
                                 statements.push(
                                     factory.createTypeAliasDeclaration(
-                                        undefined,
                                         undefined,
                                         config.routeTypeName,
                                         undefined,
@@ -375,7 +373,6 @@ function createImportStatement(factory: ts.NodeFactory) {
         ),
     ]);
     const importExpress = factory.createImportDeclaration(
-        undefined,
         undefined,
         factory.createImportClause(false, undefined, namedImport),
         factory.createStringLiteral('express')
