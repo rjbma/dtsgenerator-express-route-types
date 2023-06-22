@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = require("tslib");
-var fs_1 = (0, tslib_1.__importDefault)(require("fs"));
-var path_1 = (0, tslib_1.__importDefault)(require("path"));
-var typescript_1 = (0, tslib_1.__importDefault)(require("typescript"));
-var __1 = (0, tslib_1.__importDefault)(require(".."));
+var fs_1 = tslib_1.__importDefault(require("fs"));
+var path_1 = tslib_1.__importDefault(require("path"));
+var typescript_1 = tslib_1.__importDefault(require("typescript"));
+var __1 = tslib_1.__importDefault(require(".."));
 var assert = require("assert");
 var splitStringByNewLine = function (input) {
     var splitted = input.split(/\r?\n/);
@@ -21,9 +21,9 @@ describe('PreProcess Snapshot testing', function () {
         var caseName = dirent.name;
         var normalizedTestName = caseName.replace(/-/g, ' ');
         it("Test ".concat(normalizedTestName), function () {
-            return (0, tslib_1.__awaiter)(this, void 0, void 0, function () {
+            return tslib_1.__awaiter(this, void 0, void 0, function () {
                 var fixtureDir, inputFilePath, configFilePath, expectedFilePath, inputContent, input, option, context, p, handler, result, actual, expected;
-                return (0, tslib_1.__generator)(this, function (_a) {
+                return tslib_1.__generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
                             fixtureDir = path_1.default.join(fixturesDir, caseName);
@@ -80,9 +80,9 @@ describe('PostProcess Snapshot testing', function () {
         var caseName = dirent.name;
         var normalizedTestName = caseName.replace(/-/g, ' ');
         it("Test ".concat(normalizedTestName), function () {
-            return (0, tslib_1.__awaiter)(this, void 0, void 0, function () {
+            return tslib_1.__awaiter(this, void 0, void 0, function () {
                 var fixtureDir, inputFilePath, configFilePath, expectedFilePath, inputContent, input, option, context, p, factory, result, printer, actual, expected;
-                return (0, tslib_1.__generator)(this, function (_a) {
+                return tslib_1.__generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
                             fixtureDir = path_1.default.join(fixturesDir, caseName);
