@@ -88,7 +88,7 @@ async function postProcess(
                 });
             }
 
-            return ts.visitNode(root, rootVisit);
+            return ts.visitNode(root, rootVisit) as ts.SourceFile;
 
             /**
              * Main purpose of this visitor e just to find the `Paths` **ModuleDeclaration**
